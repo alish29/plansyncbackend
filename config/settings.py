@@ -19,17 +19,19 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 # If in production require SECRET_KEY and ALLOWED_HOSTS. For dev provide sensible defaults.
 DJANGO_PRODUCTION = env.bool("DJANGO_PRODUCTION", default=False)
 
+# SECRET_KEY: prefer explicit SECRET_KEY from environment (production).
+# For development fallback to a freshly generated key so the app still runs.
 if DJANGO_PRODUCTION:
-    # In production, these must be set in the environment (Render / Vercel / etc)
-    SECRET_KEY = env("SECRET_KEY")  # will raise ImproperlyConfigured if missing
-    ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")  # must be provided like: example.com,api.example.com
+    SECRET_KEY = os.environ.get("SECRET_KEY")
+    if not SECRET_KEY:
+        raise RuntimeError("DJANGO_PRODUCTION=True but SECRET_KEY is not set in environment")
+    ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 else:
-    # Development fallback: use value from .env if present, otherwise generate/ default
-    SECRET_KEY = env("SECRET_KEY", default=get_random_secret_key())
+    SECRET_KEY = os.environ.get("SECRET_KEY") or get_random_secret_key()
     ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1", ".onrender.com"])
 
-# DEBUG
-DEBUG = env("DEBUG")
+# DEBUG (cast to bool)
+DEBUG = env.bool("DEBUG", default=False)
 
 # Application definition
 INSTALLED_APPS = [
@@ -102,12 +104,13 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
-
-# Static & media
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Whitenoise static files storage (recommended for production)
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "users.User"
