@@ -8,6 +8,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from .serializers import UserListSerializer
 
 from .serializers import (
     ForgotPasswordSerializer,
@@ -101,4 +102,15 @@ class ForgotPasswordView(APIView):
         return Response(
             {'detail': 'If an account with that email exists, a reset link will be sent shortly.'},
             status=status.HTTP_200_OK,
-        )
+        )   
+    
+class UserListView(generics.ListAPIView):
+    serializer_class = UserListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+    def get_queryset(self):
+        return User.objects.exclude(id=self.request.user.id)
+
+
+
