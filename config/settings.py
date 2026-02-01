@@ -4,22 +4,38 @@ from datetime import timedelta
 from pathlib import Path
 from django.core.management.utils import get_random_secret_key
 
-env = environ.Env(DEBUG=(bool, False))
+# ------------------------------------------------------------------------------
+# BASE SETUP
+# ------------------------------------------------------------------------------
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env(
+    DEBUG=(bool, False)
+)
+
+# Read .env only for local development
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
 DJANGO_PRODUCTION = env.bool("DJANGO_PRODUCTION", default=False)
+DEBUG = env.bool("DEBUG", default=not DJANGO_PRODUCTION)
+
+# ------------------------------------------------------------------------------
+# SECURITY
+# ------------------------------------------------------------------------------
 
 if DJANGO_PRODUCTION:
     SECRET_KEY = os.environ.get("SECRET_KEY")
     if not SECRET_KEY:
         raise RuntimeError("SECRET_KEY missing")
-    ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
+    ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
 else:
     SECRET_KEY = os.environ.get("SECRET_KEY") or get_random_secret_key()
     ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
-DEBUG = env.bool("DEBUG", default=True)
+# ------------------------------------------------------------------------------
+# APPLICATIONS
+# ------------------------------------------------------------------------------
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -28,9 +44,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-     "notifications",
 
-    # third party
+    # third-party
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
@@ -41,19 +56,12 @@ INSTALLED_APPS = [
     "dashboard",
     "feedback",
     "contact",
+    "notifications",
 ]
 
-
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-
-EMAIL_HOST = env("EMAIL_HOST")
-EMAIL_PORT = env.int("EMAIL_PORT", default=587)
-EMAIL_USE_TLS = True
-
-EMAIL_HOST_USER = env("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+# ------------------------------------------------------------------------------
+# MIDDLEWARE
+# ------------------------------------------------------------------------------
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -67,7 +75,16 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# ------------------------------------------------------------------------------
+# URLS / WSGI
+# ------------------------------------------------------------------------------
+
 ROOT_URLCONF = "config.urls"
+WSGI_APPLICATION = "config.wsgi.application"
+
+# ------------------------------------------------------------------------------
+# TEMPLATES
+# ------------------------------------------------------------------------------
 
 TEMPLATES = [
     {
@@ -85,7 +102,9 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "config.wsgi.application"
+# ------------------------------------------------------------------------------
+# DATABASE
+# ------------------------------------------------------------------------------
 
 DATABASES = {
     "default": env.db(
@@ -94,6 +113,12 @@ DATABASES = {
     )
 }
 
+# ------------------------------------------------------------------------------
+# AUTH
+# ------------------------------------------------------------------------------
+
+AUTH_USER_MODEL = "users.User"
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -101,20 +126,49 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
+# ------------------------------------------------------------------------------
+# INTERNATIONALIZATION
+# ------------------------------------------------------------------------------
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
+# ------------------------------------------------------------------------------
+# STATIC & MEDIA
+# ------------------------------------------------------------------------------
+
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-AUTH_USER_MODEL = "users.User"
+# ------------------------------------------------------------------------------
+# EMAIL (RENDER SAFE ✅)
+# ------------------------------------------------------------------------------
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or "no-reply@example.com"
+
+# Optional: disable email sending locally
+if not DJANGO_PRODUCTION:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# ------------------------------------------------------------------------------
+# DJANGO REST FRAMEWORK
+# ------------------------------------------------------------------------------
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -130,15 +184,15 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
 
+# ------------------------------------------------------------------------------
+# CORS
+# ------------------------------------------------------------------------------
+
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
-EMAIL_HOST = env("EMAIL_HOST", default="")
-EMAIL_PORT = env.int("EMAIL_PORT", default=587)
-EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+# ------------------------------------------------------------------------------
+# DEFAULTS
+# ------------------------------------------------------------------------------
 
-EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
-
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or "no-reply@example.com"
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
