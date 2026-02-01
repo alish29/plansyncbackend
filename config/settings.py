@@ -28,7 +28,7 @@ if DJANGO_PRODUCTION:
     SECRET_KEY = os.environ.get("SECRET_KEY")
     if not SECRET_KEY:
         raise RuntimeError("SECRET_KEY missing")
-    ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
+    ALLOWED_HOSTS=plansyncbackend.onrender.com
 else:
     SECRET_KEY = os.environ.get("SECRET_KEY") or get_random_secret_key()
     ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
